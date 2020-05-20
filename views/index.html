@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件管理系统</title>
+    <style>
+        table {
+            width: 100%;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            height: 60px
+        }
+
+        .btn {
+            height: 50px;
+            width: 100px;
+            border-radius: 10px;
+            font-size: 18px;
+            border: none;
+            outline: none;
+        }
+        .active {
+            color: #ffffff;
+            background-color: #5dc5d3;
+        }
+
+        .unactive {
+            color: #999999;
+            background-color: #eeeeee;
+        }
+
+        .btns {
+            margin-top: 50px;
+            margin-bottom: 50px;
+        }
+
+        .back {
+            margin-right: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="btns">
+        <button class="back btn unactive">后退</button>
+        <button class="forward btn unactive">前进</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>文件名</th>
+                <th>大小/byte</th>
+                <th>类型</th>
+            </tr>
+        </thead>
+        
+        <tbody>
+        </tbody>
+    </table>
+    <script type="text/javascript">
+        const basePath = '/fileSystem';
+        let current = 0;
+        let forwardStep = 0;
+        
+        window.onload = function() {
+            const path = location.pathname;
+            fetchData(path);
+            initEvent();
+        }
+        
+        function fetchData(path) {
+            fetch(`/api/subfiles?path=${path}`)
+                .then(res => res.json())
+                .then(data => {
+                    console.log(data);
+                    renderData(data);
+                })
+        }
+
+        function renderData(data) {
+            const tbody = document.querySelector('tbody');
+            tbody.innerHTML = '';
+            if(data.content.length) {
+                const fragment = document.createDocumentFragment();
+                data.content.forEach((file) => {
+                    const tr = document.createElement('tr');
+                    Object.keys(file).forEach((key) => {
+                        const td = document.createElement('td');
+                        if(key === 'path') return;
+                        if (key === 'name' && file.type === 'dir') {
+                            td.onclick = navigate;
+                            td.innerHTML = `<a href="${file.path}">${file[key]}</a>`
+                        } else {
+                            td.innerHTML = file[key];
+                        }
+                        tr.appendChild(td);
+                    })
+                    fragment.appendChild(tr);
+                });
+                
+                tbody.appendChild(fragment);
+            }
+        }
+
+        function navigate(event) {
+            event.preventDefault();
+            if(event.target.tagName.toUpperCase() === 'A') {
+                const path = event.target.attributes.href.value
+                history.pushState({
+                    path
+                }, null, path);
+                forwardStep = 0;
+                current++;
+                fetchData(path);
+                changeBtnStyle();
+            }
+        };
+
+        function initEvent() {
+            const forwardBtn = document.querySelector('.forward');
+            const backBtn = document.querySelector('.back');
+            forwardBtn.onclick = function() {
+                if(forwardStep <= 0) return;
+                history.forward();
+                current++;
+                forwardStep--;
+                changeBtnStyle();
+            }
+
+            backBtn.onclick = function() {
+                if (current <= 0) return;
+                history.back();
+                current--;
+                forwardStep++;
+                changeBtnStyle();
+            }
+
+            window.addEventListener('popstate', (e) => {
+                console.log(e);
+                const state = e.state || {};
+                state.path ? fetchData(state.path) : fetchData(basePath);
+            });
+        }
+
+        function changeBtnStyle() {
+            const forwardClassList = document.querySelector('.forward').classList;
+            const backClassList = document.querySelector('.back').classList;
+
+            if(current > 0) {
+                backClassList.remove('unactive');
+                backClassList.add('active');
+            } else {
+                backClassList.remove('active');
+                backClassList.add('unactive');
+            }
+
+            if(forwardStep > 0) {
+                forwardClassList.remove('unactive');
+                forwardClassList.add('active');
+            } else {
+                forwardClassList.remove('active');
+                forwardClassList.add('unactive');
+            }
+        }
+
+    </script>
+</body>
+
+</html>
