@@ -5,11 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件管理系统</title>
     <style>
+        body {
+            width: 80%;
+            margin: auto;
+        }
         table {
             width: 100%;
         }
         table, th, td {
-            border: 1px solid black;
+            text-align: center;
+            background-color: aliceblue;
+            border: 1px solid #ffffff;
         }
         th, td {
             height: 60px
@@ -22,13 +28,11 @@
             font-size: 18px;
             border: none;
             outline: none;
-        }
-        .active {
             color: #ffffff;
             background-color: #5dc5d3;
         }
 
-        .unactive {
+        button:disabled {
             color: #999999;
             background-color: #eeeeee;
         }
@@ -46,8 +50,8 @@
 <body>
 
     <div class="btns">
-        <button class="back btn unactive">后退</button>
-        <button class="forward btn unactive">前进</button>
+        <button disabled class="back btn">后退</button>
+        <button disabled class="forward btn">前进</button>
     </div>
 
     <table>
@@ -65,7 +69,7 @@
     <script type="text/javascript">
         const basePath = '/fileSystem';
         let current = 0;
-        let forwardStep = 0;
+        const stateQueue = [basePath];
         
         window.onload = function() {
             const path = location.pathname;
@@ -77,7 +81,6 @@
             fetch(`/api/subfiles?path=${path}`)
                 .then(res => res.json())
                 .then(data => {
-                    console.log(data);
                     renderData(data);
                 })
         }
@@ -114,10 +117,12 @@
                 history.pushState({
                     path
                 }, null, path);
-                forwardStep = 0;
                 current++;
+                // 删除当前state以后的所有state,并把新的state push到数组中
+                stateQueue.splice(current, stateQueue.length - current, path);
+                setButtonStatus();
                 fetchData(path);
-                changeBtnStyle();
+                
             }
         };
 
@@ -125,47 +130,36 @@
             const forwardBtn = document.querySelector('.forward');
             const backBtn = document.querySelector('.back');
             forwardBtn.onclick = function() {
-                if(forwardStep <= 0) return;
+                if(current >= stateQueue.length - 1) return;
                 history.forward();
-                current++;
-                forwardStep--;
-                changeBtnStyle();
             }
 
             backBtn.onclick = function() {
                 if (current <= 0) return;
                 history.back();
-                current--;
-                forwardStep++;
-                changeBtnStyle();
             }
 
             window.addEventListener('popstate', (e) => {
                 console.log(e);
                 const state = e.state || {};
-                state.path ? fetchData(state.path) : fetchData(basePath);
+                const { path } = state;
+                if(path) {
+                    fetchData(path);
+                    current = stateQueue.indexOf(path);
+                } else {
+                    fetchData(basePath);
+                    current = 0;
+                }
+                setButtonStatus();
             });
         }
 
-        function changeBtnStyle() {
-            const forwardClassList = document.querySelector('.forward').classList;
-            const backClassList = document.querySelector('.back').classList;
-
-            if(current > 0) {
-                backClassList.remove('unactive');
-                backClassList.add('active');
-            } else {
-                backClassList.remove('active');
-                backClassList.add('unactive');
-            }
-
-            if(forwardStep > 0) {
-                forwardClassList.remove('unactive');
-                forwardClassList.add('active');
-            } else {
-                forwardClassList.remove('active');
-                forwardClassList.add('unactive');
-            }
+        function setButtonStatus() {
+            const forward = document.querySelector('.forward');
+            const back = document.querySelector('.back');
+            const len = stateQueue.length;
+            current > 0 ? back.removeAttribute('disabled') : back.setAttribute('disabled', 'disabled');
+            current < len-1 ? forward.removeAttribute('disabled') : forward.setAttribute('disabled', 'disabled');
         }
 
     </script>
