@@ -17,7 +17,7 @@
             background-color: aliceblue;
             border: 1px solid #ffffff;
         }
-        th, td {
+        tr, th, td {
             height: 60px
         }
 
@@ -67,13 +67,12 @@
         </tbody>
     </table>
     <script type="text/javascript">
-        const basePath = '/fileSystem';
+        let basePath = location.pathname;
         let current = 0;
         const stateQueue = [basePath];
         
         window.onload = function() {
-            const path = location.pathname;
-            fetchData(path);
+            fetchData(basePath);
             initEvent();
         }
         
@@ -96,7 +95,6 @@
                         const td = document.createElement('td');
                         if(key === 'path') return;
                         if (key === 'name' && file.type === 'dir') {
-                            td.onclick = navigate;
                             td.innerHTML = `<a href="${file.path}">${file[key]}</a>`
                         } else {
                             td.innerHTML = file[key];
@@ -107,24 +105,12 @@
                 });
                 
                 tbody.appendChild(fragment);
+            } else {
+                const tr = document.createElement('tr');
+                tr.innerHTML = data.msg;
+                tbody.appendChild(tr);
             }
         }
-
-        function navigate(event) {
-            event.preventDefault();
-            if(event.target.tagName.toUpperCase() === 'A') {
-                const path = event.target.attributes.href.value
-                history.pushState({
-                    path
-                }, null, path);
-                current++;
-                // 删除当前state以后的所有state,并把新的state push到数组中
-                stateQueue.splice(current, stateQueue.length - current, path);
-                setButtonStatus();
-                fetchData(path);
-                
-            }
-        };
 
         function initEvent() {
             const forwardBtn = document.querySelector('.forward');
@@ -152,6 +138,21 @@
                 }
                 setButtonStatus();
             });
+
+            window.addEventListener('click', (event) => {
+                event.preventDefault();
+                if(event.target.tagName.toUpperCase() === 'A') {
+                    const path = event.target.attributes.href.value
+                    history.pushState({
+                        path
+                    }, null, path);
+                    current++;
+                    // 删除当前state以后的所有state,并把新的state push到数组中
+                    stateQueue.splice(current, stateQueue.length - current, path);
+                    setButtonStatus();
+                    fetchData(path);
+                }
+            })
         }
 
         function setButtonStatus() {
