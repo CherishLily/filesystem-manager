@@ -1,15 +1,41 @@
+#!/usr/bin/env node
+
 const Koa = require('koa');
 const fs = require('fs');
+const pt = require('path');
+const send = require('koa-send');
+const child_process = require('child_process');
 const app = new Koa();
 
+
+console.log('当前执行的node路径:', process.execPath)
+console.log('代码存放的位置:', __dirname)
+console.log('当前执行程序的路径:', process.cwd())
 
 app.use(async (ctx, next) => {
     const path = ctx.path;
     if(path === '/api/subfiles') {
         await next();
-    } else {
-        ctx.type = 'text/html';
-        ctx.body = fs.createReadStream('./views/index.html');
+    }
+    else if(path === '/api/upload') {
+        // TODO文件上传
+
+    }
+    else {
+        try {
+            if(fs.statSync(path).isFile()) {
+                await send(ctx, pt.resolve(__dirname, path), {
+                    root: '/',
+                    hidden: true
+                });
+            } else {
+                ctx.type = 'text/html';
+                ctx.body = fs.createReadStream(__dirname + '/views/index.html');
+            }
+            
+        } catch (err) {
+            ctx.body = '没有该文件或目录';
+        }
     }
 });
 
@@ -20,28 +46,40 @@ app.use(async (ctx) => {
     };
     
     let path = ctx.query.path;
-    if(!path.endsWith('/')) {
-        path = `${path}/`;
-    }
     try {
-        const dirents = fs.readdirSync(path, { withFileTypes: true });
-        for (const dirent of dirents) {
-            const item = {
-                name: dirent.name,
-                size: 0,
-                type: '',
-                path: `${path}${dirent.name}`
+        const stat = fs.statSync(path);
+        if(stat.isFile()) {
+            // 传输文件
+            await send(ctx, pt.resolve(__dirname, path), {
+                root: '/',
+                hidden: true
+            });
+            return;
+        } else if(stat.isDirectory()) {
+            // 返回该目录下的文件信息
+            if(!path.endsWith('/')) {
+                path = `${path}/`;
             }
-            if(dirent.isDirectory()) {
-                item.type = 'dir';
-            } else if(dirent.isFile()) {
-                item.type = 'file';
-                const states = fs.statSync(`${path}${dirent.name}`);
-                item.size = states.size;
+            const dirents = fs.readdirSync(path, { withFileTypes: true });
+            for (const dirent of dirents) {
+                const item = {
+                    name: dirent.name,
+                    size: 0,
+                    type: '',
+                    path: `${path}${dirent.name}`
+                }
+                if(dirent.isDirectory()) {
+                    item.type = 'dir';
+                } else if(dirent.isFile()) {
+                    item.type = 'file';
+                    const states = fs.statSync(`${path}${dirent.name}`);
+                    item.size = states.size;
+                }
+                res.content.push(item);
             }
-            res.content.push(item);
+            !res.content.length && (res.msg = '当前目录为空');
+
         }
-        !res.content.length && (res.msg = '当前目录为空');
     } catch (e) {
         res.msg = '当前目录不存在或没有权限读取';
         console.log(e);
@@ -52,5 +90,6 @@ app.use(async (ctx) => {
 })
 
 app.listen(3000, () => {
+    child_process.exec(`open http://localhost:3000/`)
     console.log('正在监听3000端口...')
 });

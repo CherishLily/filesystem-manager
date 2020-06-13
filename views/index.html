@@ -80,6 +80,7 @@
             fetch(`/api/subfiles?path=${path}`)
                 .then(res => res.json())
                 .then(data => {
+                    console.log(data);
                     renderData(data);
                 })
         }
@@ -94,9 +95,10 @@
                     Object.keys(file).forEach((key) => {
                         const td = document.createElement('td');
                         if(key === 'path') return;
-                        if (key === 'name' && file.type === 'dir') {
-                            td.innerHTML = `<a href="${file.path}">${file[key]}</a>`
-                        } else {
+                        if (key === 'name' && (file.type === 'dir' || file.type === 'file')) {
+                            td.innerHTML = `<a ${file.type === 'file' ? `download=${file[key]}` : ''} href="${file.path}">${file[key]}</a>`
+                        }
+                        else {
                             td.innerHTML = file[key];
                         }
                         tr.appendChild(td);
@@ -140,8 +142,12 @@
             });
 
             window.addEventListener('click', (event) => {
-                event.preventDefault();
                 if(event.target.tagName.toUpperCase() === 'A') {
+                    if(event.target.attributes.download) {
+                        console.log(event.target.attributes.download);
+                        return;
+                    }
+                    event.preventDefault();
                     const path = event.target.attributes.href.value
                     history.pushState({
                         path

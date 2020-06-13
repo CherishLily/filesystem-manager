@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "fsm": "index.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index"
@@ -11,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "koa": "^2.12.0",
+    "koa-send": "^5.0.0",
     "path": "^0.12.7"
   }
 }
