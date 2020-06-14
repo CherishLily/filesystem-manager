@@ -4,6 +4,7 @@ const Koa = require('koa');
 const fs = require('fs');
 const pt = require('path');
 const send = require('koa-send');
+const koaBody = require('koa-body');
 const child_process = require('child_process');
 const app = new Koa();
 
@@ -12,6 +13,14 @@ console.log('当前执行的node路径:', process.execPath)
 console.log('代码存放的位置:', __dirname)
 console.log('当前执行程序的路径:', process.cwd())
 
+app.use(koaBody({
+    multipart: true,
+    formidable: {
+        maxFieldsSize: 200*1024*1024  // 200MB (该字段默认是2MB)
+    }
+
+}))
+
 app.use(async (ctx, next) => {
     const path = ctx.path;
     if(path === '/api/subfiles') {
@@ -19,14 +28,26 @@ app.use(async (ctx, next) => {
     }
     else if(path === '/api/upload') {
         // TODO文件上传
+        console.log('files:', ctx.request.files);
+        const file = ctx.request.files.file;
+        console.log('file path:', file.path);
+        const readStream = fs.createReadStream(file.path);
+        const splitNames = file.name.split('.');
+        const ext = splitNames.pop();
+        const fileName = `${splitNames.join('.')}_${Math.ceil((Math.random() * 10000)).toString()}.${ext}`;
 
+        const writeableStream = fs.createWriteStream(`upload/${fileName}`);
+        readStream.pipe(writeableStream);
+        ctx.body = {
+            msg: '上传成功'
+        };
     }
     else {
         try {
             if(fs.statSync(path).isFile()) {
                 await send(ctx, pt.resolve(__dirname, path), {
                     root: '/',
-                    hidden: true
+                    hidden: false
                 });
             } else {
                 ctx.type = 'text/html';

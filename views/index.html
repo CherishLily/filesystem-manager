@@ -45,6 +45,10 @@
         .back {
             margin-right: 20px;
         }
+
+        .upload {
+            float: right;
+        }
     </style>
 </head>
 <body>
@@ -52,6 +56,7 @@
     <div class="btns">
         <button disabled class="back btn">后退</button>
         <button disabled class="forward btn">前进</button>
+        <button class="btn upload">上传文件</button>
     </div>
 
     <table>
@@ -60,6 +65,7 @@
                 <th>文件名</th>
                 <th>大小/byte</th>
                 <th>类型</th>
+                <th>操作</th>
             </tr>
         </thead>
         
@@ -95,14 +101,19 @@
                     Object.keys(file).forEach((key) => {
                         const td = document.createElement('td');
                         if(key === 'path') return;
-                        if (key === 'name' && (file.type === 'dir' || file.type === 'file')) {
-                            td.innerHTML = `<a ${file.type === 'file' ? `download=${file[key]}` : ''} href="${file.path}">${file[key]}</a>`
-                        }
-                        else {
+                        if (key === 'name' && file.type === 'dir') {
+                            td.innerHTML = `<a href="${file.path}">${file[key]}</a>`
+                        } else {
                             td.innerHTML = file[key];
                         }
                         tr.appendChild(td);
-                    })
+                    });
+                    const td = document.createElement('td');
+                    if(file.type === 'file') {
+                        td.innerHTML = `<a href=${file.path} download=${file.name}>下载</a>`
+                    }
+                    tr.appendChild(td);
+
                     fragment.appendChild(tr);
                 });
                 
@@ -117,6 +128,8 @@
         function initEvent() {
             const forwardBtn = document.querySelector('.forward');
             const backBtn = document.querySelector('.back');
+            const upload = document.querySelector('.upload');
+
             forwardBtn.onclick = function() {
                 if(current >= stateQueue.length - 1) return;
                 history.forward();
@@ -125,6 +138,31 @@
             backBtn.onclick = function() {
                 if (current <= 0) return;
                 history.back();
+            }
+
+            upload.onclick = function() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.click();
+                input.onchange = function() {
+                    console.log(input.files);
+                    const file = input.files[0];
+                    const form = new FormData();
+                    form.append('file', file);
+
+                    fetch('/api/upload', {
+                        body: form,
+                        method: 'POST',
+                        // headers: {
+                        //     'Content-type': 'multipart/form-data;'
+                        // },
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        alert(result.msg);
+                    })
+
+                }
             }
 
             window.addEventListener('popstate', (e) => {
